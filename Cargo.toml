@@ -1,0 +1,9 @@
+[package]
+name = "rust-test"
+version = "0.1.0"
+authors = ["Rodrigo Valle <rdan.valle@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# this is broken
+#ruduino = "0.2"
