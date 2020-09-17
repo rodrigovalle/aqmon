@@ -1,6 +1,6 @@
 .PHONY: upload
 
-BIN=rust-test
+BIN=aqmon
 DEVICE=/dev/ttyUSB0
 RELEASE_DIR=target/avr-unknown-gnu-atmega2560/release
 ELF=$(RELEASE_DIR)/$(BIN).elf
