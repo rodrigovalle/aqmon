@@ -11,7 +11,8 @@
   "late-link-args": {
       "gcc": [
           "-lgcc",
-          "-lc"
+          "-lc",
+          "-flto"
       ]
   },
   "linker": "avr-gcc",
@@ -24,7 +25,8 @@
   "pre-link-args": {
     "gcc": [
       "-mmcu=atmega2560",
-      "-Wl,--as-needed"
+      "-Wl,--as-needed",
+      "-Wl,--gc-sections"
     ]
   },
   "target-c-int-width": "16",
