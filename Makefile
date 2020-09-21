@@ -8,7 +8,7 @@ HEX=$(RELEASE_DIR)/$(BIN).hex
 EEP=$(RELEASE_DIR)/$(BIN).eep
 SRC=$(wildcard **/*.rs)
 
-build: $(HEX)
+build: $(HEX) $(EEP)
 
 upload: $(HEX)
 	avrdude -patmega2560 -cwiring -P$(DEVICE) -b115200 -D -Uflash:w:$(HEX):i

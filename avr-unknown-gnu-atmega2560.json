@@ -7,7 +7,7 @@
   "env": "",
   "exe-suffix": ".elf",
   "executables": true,
-  "is-builtin": true,
+  "is-builtin": false,
   "late-link-args": {
       "gcc": [
           "-lgcc",
