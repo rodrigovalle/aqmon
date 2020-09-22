@@ -55,8 +55,8 @@ impl Serial {
         let ucsrc = Register::new(RegisterAddr::UCSR0C);
 
         // flags to control rx/tx on the USART
-        let rx_enable = 0b00010000;
-        let tx_enable = 0b00001000;
+        let rx_enable: u8 = 0b00010000;
+        let tx_enable: u8 = 0b00001000;
 
         // These flags tell the hardware to send interrupts for async handling
         // of serial I/O. Could be interesting but completely unecessary for now
@@ -65,8 +65,8 @@ impl Serial {
 
         // aka uscz (usart character size)
         // there are only 3 bits to represent this quantity
-        let data_bits = 8;
-        let data_bits = data_bits & 0b00000111;
+        let data_bits: u8 = 8;
+        let data_bits: u8 = data_bits & 0b00000111;
 
         // aka upm (usart parity mode)
         // let parity_bit = 0b00100000;      // enable partiy check
@@ -76,24 +76,45 @@ impl Serial {
         // let stop_bits = 1;  // \in {1, 2}
 
         // get the most significant data bit to put in ucsrb
-        let data_bit_h = data_bits >> 2;
+        let data_bit_h: u8 = data_bits >> 2;
         // get the two least significant data bits to put in ucsrc
-        let data_bit_l = data_bits & 0b00000011;
+        let data_bit_l: u8 = data_bits & 0b00000011;
 
         ucsrb.write(rx_enable | tx_enable | (data_bit_h << 1));
         ucsrc.write(data_bit_l << 1);
     }
 
-    // init() must be called before tx()
+    // assumptions: init() must be called before tx()
     // TODO: express this with the type system so not calling init() is a
     // compile time error
-    pub fn tx(&self, ) {
+    pub fn tx(&self, buf: &[u8]) {
+        let udr = Register::new(RegisterAddr::UDR0);
+        for byte in buf {
+            self.wait_data_register_empty();
+            udr.write(*byte);
+        }
     }
 
-    // init() must be called before rx()
+    // assumptions: init() must be called before rx()
     // TODO: express this with the type system so not calling init() is a
     // compile error
-    pub fn rx(&self) {
+    pub fn rx(&self, buf: &mut [u8]) {
+        let udr = Register::new(RegisterAddr::UDR0);
+        for i in 0..buf.len() {
+            self.wait_data_register_empty();
+            buf[i] = udr.read();
+        }
+    }
+
+    // Blocks until the data register is ready for tx/rx
+    fn wait_data_register_empty(&self) {
+        let ucsra = Register::new(RegisterAddr::UCSR0A);
+        let data_empty: u8 = 0b00100000;  // UDRE flag is set when empty
+        loop {
+            if ucsra.read() & data_empty != 0 {
+                break;
+            }
+        }
     }
 
     // TODO: add some helpers to read RX/TX complete bits so we can busy-wait on
