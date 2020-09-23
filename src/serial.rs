@@ -9,7 +9,7 @@
 use crate::register::{Register, RegisterAddr};
 
 pub struct Serial {
-    ubrrn: u16
+    ubrr: u16
 }
 
 // Frequency of the system clock; the USART on the chip scales
@@ -20,8 +20,8 @@ const CLK: u32 = 16_000_000;
 impl Serial {
     pub const fn new(baud_rate: u32) -> Serial {
         // this formula was taken from the atmega2650 datasheet
-        let ubrrn = (CLK / (16 * baud_rate) - 1) as u16;
-        Serial { ubrrn }
+        let ubrr = (CLK / (16 * baud_rate) - 1) as u16;
+        Serial { ubrr }
     }
 
     // to intialize the UART we need to
@@ -47,8 +47,8 @@ impl Serial {
         // set the baud rate
         let ubrrh = Register::new(RegisterAddr::UBRR0H);
         let ubrrl = Register::new(RegisterAddr::UBRR0L);
-        ubrrh.write((self.ubrrn >> 8) as u8);
-        ubrrl.write(self.ubrrn as u8);
+        ubrrh.write((self.ubrr >> 8) as u8);
+        ubrrl.write(self.ubrr as u8);
 
         // USART status and control registers
         let ucsrb = Register::new(RegisterAddr::UCSR0B);
@@ -63,25 +63,19 @@ impl Serial {
         // let rx_complete_interrupt_enable = 0b10000000;
         // let tx_complete_interrupt_enable = 0b01000000;
 
-        // aka uscz (usart character size)
-        // there are only 3 bits to represent this quantity
-        let data_bits: u8 = 8;
-        let data_bits: u8 = data_bits & 0b00000111;
-
         // aka upm (usart parity mode)
         // let parity_bit = 0b00100000;      // enable partiy check
         // let parity_bit_odd = 0b00010000;  // even or odd parity check
 
         // aka usbs (usart stop bit select)
-        // let stop_bits = 1;  // \in {1, 2}
+        // let stop_bits = 1;
 
-        // get the most significant data bit to put in ucsrb
-        let data_bit_h: u8 = data_bits >> 2;
-        // get the two least significant data bits to put in ucsrc
-        let data_bit_l: u8 = data_bits & 0b00000011;
+        // aka uscz (usart character size)
+        // set manually from the data sheet to 8-bit frames
+        let data_bits: u8 = 0b00000110;  // 8-bit frames
 
-        ucsrb.write(rx_enable | tx_enable | (data_bit_h << 1));
-        ucsrc.write(data_bit_l << 1);
+        ucsrb.write(rx_enable | tx_enable);
+        ucsrc.write(data_bits);
     }
 
     // assumptions: init() must be called before tx()
@@ -89,8 +83,15 @@ impl Serial {
     // compile time error
     pub fn tx(&self, buf: &[u8]) {
         let udr = Register::new(RegisterAddr::UDR0);
+        let ucsra = Register::new(RegisterAddr::UCSR0A);
+        let data_empty: u8 = 0b00100000;  // UDRE flag is set when empty
+
         for byte in buf {
-            self.wait_data_register_empty();
+            loop {
+                if ucsra.read() & data_empty != 0 {
+                    break;
+                }
+            }
             udr.write(*byte);
         }
     }
@@ -100,19 +101,25 @@ impl Serial {
     // compile error
     pub fn rx(&self, buf: &mut [u8]) {
         let udr = Register::new(RegisterAddr::UDR0);
-        for i in 0..buf.len() {
-            self.wait_data_register_empty();
-            buf[i] = udr.read();
-        }
-    }
-
-    // Blocks until the data register is ready for tx/rx
-    fn wait_data_register_empty(&self) {
         let ucsra = Register::new(RegisterAddr::UCSR0A);
-        let data_empty: u8 = 0b00100000;  // UDRE flag is set when empty
-        loop {
-            if ucsra.read() & data_empty != 0 {
-                break;
+        let rx_complete = 0b10000000;
+
+        for i in 0..buf.len() {
+            loop {
+                if ucsra.read() & rx_complete != 0 {
+                    break;
+                }
+            }
+
+            // The runtime bounds checking can cause this to panic, and
+            // panicking causes core::fmt to be linked in which has a hefty
+            // memory cost:
+            //
+            //   buf[i] = udr.read();
+            //
+            // Avoid panicking and use the get() methods instead.
+            if let Some(byte) = buf.get_mut(i) {
+                *byte = udr.read();
             }
         }
     }
