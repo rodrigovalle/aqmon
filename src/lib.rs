@@ -1,19 +1,7 @@
-#![feature(llvm_asm)]
-#![feature(const_fn)]
-
 #![no_std]
-#![no_main]
 
-use core::panic::PanicInfo;
-
-#[no_mangle]
-pub extern "C" fn main() {
-}
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
+pub mod register;
+pub mod serial;
 
 // These symbols were missing from compiler_builtins at the time of writing so
 // I implemented my own.

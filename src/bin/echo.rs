@@ -1,6 +1,13 @@
 // echo back every byte one by one
 
-use crate::serial::Serial;
+#![feature(llvm_asm)]
+#![feature(const_fn)]
+
+#![no_std]
+#![no_main]
+
+use aqmon::serial::Serial;
+use core::panic::PanicInfo;
 
 pub struct EchoServer {
     serial: Serial,
@@ -25,4 +32,15 @@ impl EchoServer {
             }
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn main() {
+    const SERVER: EchoServer = EchoServer::new();
+    SERVER.serve()
+}
+
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
 }
