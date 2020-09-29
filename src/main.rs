@@ -4,6 +4,7 @@
 #![no_std]
 #![no_main]
 
+use aqmon::serial::Serial;
 use core::panic::PanicInfo;
 
 #[no_mangle]

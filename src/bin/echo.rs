@@ -9,14 +9,14 @@
 use aqmon::serial::Serial;
 use core::panic::PanicInfo;
 
-pub struct EchoServer {
-    serial: Serial,
+pub struct EchoServer<'a> {
+    serial: Serial<'a>,
 }
 
-impl EchoServer {
-    pub const fn new() -> EchoServer {
+impl<'a> EchoServer<'a> {
+    pub const fn new() -> EchoServer<'a> {
         EchoServer {
-            serial: Serial::new(9600),
+            serial: Serial::new(0, 9600),
         }
     }
 

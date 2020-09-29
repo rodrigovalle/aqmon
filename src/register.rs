@@ -2,7 +2,8 @@ use core::ptr;
 
 // pulled these register mappings from the atmega2560 datasheet
 #[allow(dead_code)]
-pub enum RegisterAddr {
+#[derive(Copy, Clone)]
+pub enum Register {
     UDR3   = 0x136,  // USART3 I/O data register
     UBRR3H = 0x135,  // USART3 baud rate register high byte
     UBRR3L = 0x134,  // USART3 baud rate register low byte
@@ -32,20 +33,14 @@ pub enum RegisterAddr {
     UCSR0A = 0xC0,  // USART0 configuration
 }
 
-pub struct Register {
-    addr: u16
-}
-
 impl Register {
-    pub const fn new(addr: RegisterAddr) -> Register {
-        Register { addr: addr as u16 }
-    }
-
     pub fn read(&self) -> u8 {
-        unsafe { ptr::read_volatile(self.addr as *mut u8) }
+        let addr = *self as u16;
+        unsafe { ptr::read_volatile(addr as *mut u8) }
     }
 
     pub fn write(&self, val: u8) {
-        unsafe { ptr::write_volatile(self.addr as *mut u8, val) }
+        let addr = *self as u16;
+        unsafe { ptr::write_volatile(addr as *mut u8, val) }
     }
 }
